@@ -10,7 +10,7 @@ El problema es de regresion y toda la esctructura va a estar contenida en un uni
 
 **DICCIONARIO DE VARIABLES:**
 
-Variable objetivo:\
+Variable objetivo:
 * AREA_PRIVADA_VALFINAL: Avaluo del inmueble
 
 Variables explicativas:
