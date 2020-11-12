@@ -201,19 +201,15 @@ corrplot(corr$r, order="hclust",
 names(data)
 mymodel <-
   as.formula(
-    "area_privada_valfinal ~ area_privada_area + tot_banos + n_deposito + estrato + 
-     + n_totalgarajes + c_conjagrupcerr + c_ubicacioninm + n_pisos + 
-    n_sotanos + n_vetustez + a_edipiso + c_claseinmueble + idcategoria + k_ascensor +
-    zona_av"
+    "area_privada_valfinal ~ ant_avaluo_trim + tot_banos + n_deposito + 
+    n_habitaciones + estrato + n_totalgarajes + c_conjagrupcerr + c_ubicacioninm +
+    n_sotanos + a_edipiso + c_claseinmueble + idcategoria + k_ascensor +
+    uplcodigo + nombre_com + area_privada_area"
   )
 
 data[, .N, f_fechaavaluo][order(f_fechaavaluo)]
 
 #
-
-
-
-
 
 
 # fracionamiento del dataset
