@@ -20,7 +20,9 @@ gc()
 options(scipen = '999')
 
 # librerias
-# install.packages('pacman') # Se utiliza pacman para agilizar la instalacion
+if (!require("pacman"))
+  install.packages("pacman")
+# Se utiliza pacman para agilizar la instalacion
 pacman::p_load(
   data.table,
   caret,
@@ -37,7 +39,8 @@ pacman::p_load(
   funModeling,
   mice,
   skimr,
-  corrplot
+  corrplot,
+  dataPreparation
 )
 
 # datos, arreglos y demas ####
@@ -74,10 +77,6 @@ no_factor = c("f_fechaavaluo", var_num)
 factor_vars = names(data)[!(names(data) %in% no_factor)]
 data[, (factor_vars) := lapply(.SD, factor), .SDcols = factor_vars]
 
-numericVars <- which(sapply(data, is.numeric))
-numericVarNames <- names(numericVars)
-cat('Hay', length(numericVars), 'variables numericas')
-
 # verificar nas
 naniar::vis_miss(data)
 data[, c_calidcocina := NULL]
@@ -103,6 +102,7 @@ mean(temp$a_edipiso, na.rm = T) %>% print()
 
 # imputacion con mice
 # mice solo funciona con variables numericas
+set.seed(111)
 mice(
   temp,
   m = 5,
@@ -128,7 +128,7 @@ print(profiling_num(data))
 plot_num(data)
 describe(data)
 
-# forma de ver el summary 
+# forma de ver el summary
 skim(data)
 
 # box plot sobre alguna variable
@@ -147,11 +147,7 @@ drop = c(
 )
 data[, (drop) := NULL]
 
-
-
-
-# MODELACION ####
-
+# modelacion ####
 
 # Correlaciones
 
@@ -184,7 +180,7 @@ flattenCorrMatrix <- function(cormat, pmat) {
   data.frame(
     row = rownames(cormat)[row(cormat)[ut]],
     column = rownames(cormat)[col(cormat)[ut]],
-    cor  =(cormat)[ut],
+    cor  = (cormat)[ut],
     p = pmat[ut]
   )
 }
@@ -192,8 +188,13 @@ flattenCorrMatrix <- function(cormat, pmat) {
 flattenCorrMatrix(corr$r, corr$P)
 
 # Correlaciones insignificantes en blanco
-corrplot(corr$r, order="hclust", 
-         p.mat = corr$P, sig.level = 0.01, insig = "blank")
+corrplot(
+  corr$r,
+  order = "hclust",
+  p.mat = corr$P,
+  sig.level = 0.01,
+  insig = "blank"
+)
 
 
 # Modelos clasicos: primera aproximacion al problema
@@ -201,11 +202,80 @@ corrplot(corr$r, order="hclust",
 names(data)
 mymodel <-
   as.formula(
-    "area_privada_valfinal ~ ant_avaluo_trim + tot_banos + n_deposito + 
+    "area_privada_valfinal ~ ant_avaluo_trim + tot_banos + n_deposito +
     n_habitaciones + estrato + n_totalgarajes + c_conjagrupcerr + c_ubicacioninm +
     n_sotanos + a_edipiso + c_claseinmueble + idcategoria + k_ascensor +
     uplcodigo + nombre_com + area_privada_area"
   )
+
+# Standarizacion de las variables numericas
+numericVars <- which(sapply(data, is.numeric))
+numericVarNames <- names(numericVars)
+cat('Hay', length(numericVars), 'variables numericas')
+
+scales =
+  build_scales(
+    data_set = data,
+    cols = numericVarNames,
+    verbose = TRUE
+  )
+
+print(scales)
+data %>% head()
+
+data = fast_scale(data_set = data,
+                     scales = scales,
+                     verbose = TRUE)
+
+factor_vars = which(sapply(data, is.factor))
+factorVarNames <- names(factor_vars)
+cat('Hay', length(factor_vars), 'variables numericas')
+
+# codificacion en variables categoricas
+# encoding = build_encoding(data_set = data,
+#                           cols = factorVarNames,
+#                           verbose = TRUE)
+# 
+# data = one_hot_encoder(
+#   data_set = data,
+#   encoding = encoding,
+#   drop = TRUE,
+#   verbose = TRUE
+# )
+
+# Se realiza un fraccionamiento por % de data set de la siguiente forma:
+# 0.7 Train, 0.15 Val, 0.15 Test
+# El ejercicio original se fraciona por fechas, pero por temas de replicacion, se
+# opta por realizar los dos tipos de fraccionamiento. Por tanto se haran los dos ejercicios.
+#
+
+## Fraccionamiento por %
+# train - test
+set.seed(111)
+dt = sort(sample(nrow(data), nrow(data) * .7))
+train = data[dt, ]
+test = data[-dt, ]
+
+# pd:dev se desarrolla mas adelante si se requiere
+
+# parametros y algunos ajustes para los modelos
+cores <- parallel::detectCores() - 1
+cl <- makePSOCKcluster(cores)
+registerDoParallel(cl)
+
+fitControl <- trainControl(
+  method = "repeatedcv",
+  number = 5,
+  repeats = 3,
+  allowParallel = T,
+  search = "random"
+)
+
+
+
+
+
+
 
 data[, .N, f_fechaavaluo][order(f_fechaavaluo)]
 
@@ -233,16 +303,3 @@ test <-
 
 hang_on <-
   df[f_fechaavaluo >= "2019-10-01" & f_fechaavaluo <= "2019-12-31"]
-
-
-
-
-
-
-
-
-
-
-
-
-
