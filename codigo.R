@@ -197,7 +197,6 @@ corrplot(
 )
 
 
-# Modelos clasicos: primera aproximacion al problema
 # formula
 names(data)
 mymodel <-
@@ -265,11 +264,29 @@ registerDoParallel(cl)
 
 fitControl <- trainControl(
   method = "repeatedcv",
-  number = 5,
+  number = 10,
   repeats = 3,
-  allowParallel = T,
-  search = "random"
+  allowParallel = T
 )
+
+## modelos
+
+# 1 stepwise reg
+step.model <- train(mymodel, data = data,
+                    method = "lmStepAIC", 
+                    trControl = fitControl,
+                    trace = F
+)
+# Model accuracy
+step.model$results
+# Final model coefficients
+step.model$finalModel
+# Summary of the model
+summary(step.model$finalModel)
+
+
+stopCluster(cl)
+
 
 
 
