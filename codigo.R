@@ -205,8 +205,7 @@ mymodel <-
   as.formula(
     "area_privada_valfinal ~ ant_avaluo_trim + tot_banos + n_deposito +
     n_habitaciones + estrato + n_totalgarajes + c_conjagrupcerr + c_ubicacioninm +
-    n_sotanos + a_edipiso + c_claseinmueble + idcategoria + k_ascensor +
-    uplcodigo + nombre_com + area_privada_area"
+    n_sotanos + a_edipiso + c_claseinmueble + idcategoria + k_ascensor + nombre_com + area_privada_area"
   )
 
 # Standarizacion de las variables numericas
@@ -265,34 +264,141 @@ cl = makePSOCKcluster(cores)
 registerDoParallel(cl)
 
 fitControl = trainControl(
-  method = "repeatedcv",
-  number = 5,
-  repeats = 3,
+  method = "cv",
+  number = 10,
   allowParallel = T
 )
 
 ## modelos
 
-# 1 stepwise reg
+# 1 stepwise
 tic()
-step.model = train(mymodel, data = data,
-                    method = "lmStepAIC", 
-                    trControl = fitControl,
-                    trace = F
+step.model = train(
+  mymodel,
+  data = data,
+  method = "lmStepAIC", 
+  trControl = fitControl,
+  trace = F
 )
 toc()
-beep(3)
-
-# Model accuracy
 step.model$results
-# Final model coefficients
-step.model$finalModel
-# Summary of the model
+beep(3)
+# PD: Entre mas variables categoricas tenga el modelo, mayor es el trabajo computacional
+
+# coeficientes
+# step.model$finalModel
+# summary 
 summary(step.model$finalModel)
+
+# Todas las variables 'funcional', se decide seguir con la misma ecuacion.
+rm(step.model) %>% gc()
+
+
+
+# cart Model
+cartModel <-
+  train(
+    mymodel,
+    data = train,
+    metric = "RMSE",
+    method = "rpart1SE",
+    trControl = fitControl
+  )
+
+
+cartModel$results
+ggplot(varImp(cartModel))
+
+
+
+# Bagged MARS using gCV Pruning
+marsModel =
+  train(
+    mymodel,
+    data = train,
+    metric = "RMSE",
+    method = "bagEarthGCV",
+    trControl = fitControl
+  )
+
+marsModel$results
+# ggplot(varImp(marsModel))
+
+
+# Bayesian Generalized Linear Model
+bayesModel =
+  train(
+    mymodel,
+    data = train,
+    metric = "RMSE",
+    method = "bayesglm",
+    trControl = fitControl
+  )
+
+bayesModel$results
+ggplot(varImp(bayesModel))
+
+
+# Boosted Generalized Linear Model
+glmModel =
+  train(
+    mymodel,
+    data = train,
+    metric = "RMSE",
+    method = 'glmboost',
+    trControl = fitControl
+  )
+
+glmModel$results
+ggplot(varImp(glmModel))
+
+# Boosted Trees
+gbmModel =
+  train(
+    mymodel,
+    data = train,
+    metric = "RMSE",
+    method = "gbm",
+    trControl = fitControl,
+    verbose = FALSE
+  )
+
+gbmModel$results
+
+# Random Forest
+tic()
+rfModel =
+  train(
+    mymodel,
+    data = train,
+    metric = "RMSE",
+    method = 'rf',
+    trControl = fitControl
+  )
+beep(3)
+toc()
+
+rfModel$results
+ggplot(varImp(rfModel))
 
 stopCluster(cl)
 
+gbmGrid <-  expand.grid(interaction.depth = c(1, 5, 9), 
+                        n.trees = (1:30)*50, 
+                        shrinkage = 0.1,
+                        n.minobsinnode = 20)
 
+nrow(gbmGrid)
+
+set.seed(825)
+gbmFit2 <- train(Class ~ ., data = training, 
+                 method = "gbm", 
+                 trControl = fitControl, 
+                 verbose = FALSE, 
+                 ## Now specify the exact models 
+                 ## to evaluate:
+                 tuneGrid = gbmGrid)
+gbmFit2
 
 
 
