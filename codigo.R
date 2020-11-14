@@ -40,7 +40,9 @@ pacman::p_load(
   mice,
   skimr,
   corrplot,
-  dataPreparation
+  dataPreparation,
+  tictoc,
+  beepr
 )
 
 # datos, arreglos y demas ####
@@ -258,13 +260,13 @@ test = data[-dt, ]
 # pd:dev se desarrolla mas adelante si se requiere
 
 # parametros y algunos ajustes para los modelos
-cores <- parallel::detectCores() - 1
-cl <- makePSOCKcluster(cores)
+cores = parallel::detectCores() - 1
+cl = makePSOCKcluster(cores)
 registerDoParallel(cl)
 
-fitControl <- trainControl(
+fitControl = trainControl(
   method = "repeatedcv",
-  number = 10,
+  number = 5,
   repeats = 3,
   allowParallel = T
 )
@@ -272,11 +274,15 @@ fitControl <- trainControl(
 ## modelos
 
 # 1 stepwise reg
-step.model <- train(mymodel, data = data,
+tic()
+step.model = train(mymodel, data = data,
                     method = "lmStepAIC", 
                     trControl = fitControl,
                     trace = F
 )
+toc()
+beep(3)
+
 # Model accuracy
 step.model$results
 # Final model coefficients
@@ -284,10 +290,7 @@ step.model$finalModel
 # Summary of the model
 summary(step.model$finalModel)
 
-
 stopCluster(cl)
-
-
 
 
 
