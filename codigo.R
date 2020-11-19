@@ -1,4 +1,5 @@
 
+
 'http://web.ipac.caltech.edu/staff/fmasci/home/astro_refs/BuildingPredictiveModelsR_caret.pdf'
 
 # Comentarios iniciales ####
@@ -43,7 +44,7 @@ pacman::p_load(
   dataPreparation,
   tictoc,
   beepr,
-  rattle 
+  rattle
 )
 
 # datos, arreglos y demas ####
@@ -148,6 +149,7 @@ drop = c(
   'barrio_map',
   'cluster'
 )
+
 data[, (drop) := NULL]
 
 # modelacion ####
@@ -206,7 +208,7 @@ mymodel <-
   as.formula(
     "area_privada_valfinal ~ ant_avaluo_trim + tot_banos + n_deposito +
     n_habitaciones + estrato + n_totalgarajes + c_conjagrupcerr + c_ubicacioninm +
-    n_sotanos + a_edipiso + c_claseinmueble + idcategoria + k_ascensor + nombre_com + area_privada_area"
+    n_sotanos + a_edipiso + c_claseinmueble + idcategoria + k_ascensor + area_privada_area"
   )
 
 # Standarizacion de las variables numericas
@@ -215,18 +217,16 @@ numericVarNames <- names(numericVars)
 cat('Hay', length(numericVars), 'variables numericas')
 
 scales =
-  build_scales(
-    data_set = data,
-    cols = numericVarNames,
-    verbose = TRUE
-  )
+  build_scales(data_set = data,
+               cols = numericVarNames,
+               verbose = TRUE)
 
 print(scales)
 data %>% head()
 
 data = fast_scale(data_set = data,
-                     scales = scales,
-                     verbose = TRUE)
+                  scales = scales,
+                  verbose = TRUE)
 
 factor_vars = which(sapply(data, is.factor))
 factorVarNames <- names(factor_vars)
@@ -236,7 +236,7 @@ cat('Hay', length(factor_vars), 'variables numericas')
 # encoding = build_encoding(data_set = data,
 #                           cols = factorVarNames,
 #                           verbose = TRUE)
-# 
+#
 # data = one_hot_encoder(
 #   data_set = data,
 #   encoding = encoding,
@@ -254,8 +254,8 @@ cat('Hay', length(factor_vars), 'variables numericas')
 # train - test
 set.seed(111)
 dt = sort(sample(nrow(data), nrow(data) * .7))
-train = data[dt, ]
-test = data[-dt, ]
+train = data[dt,]
+test = data[-dt,]
 
 # pd:dev se desarrolla mas adelante si se requiere
 
@@ -265,8 +265,9 @@ cl = makePSOCKcluster(cores)
 registerDoParallel(cl)
 
 fitControl = trainControl(
-  method = "cv",
-  number = 10,
+  method = "repeatedcv",
+  number = 5,
+  repeats = 10,
   allowParallel = T
 )
 
@@ -277,7 +278,7 @@ tic()
 step.model = train(
   mymodel,
   data = data,
-  method = "lmStepAIC", 
+  method = "lmStepAIC",
   trControl = fitControl,
   trace = F
 )
@@ -288,7 +289,7 @@ beep(3)
 
 # coeficientes
 # step.model$finalModel
-# summary 
+# summary
 summary(step.model$finalModel)
 
 # Todas las variables 'funcional', se decide seguir con la misma ecuacion.
@@ -302,10 +303,8 @@ cartModel <-
     data = train,
     metric = "RMSE",
     method = "rpart2",
-    trControl = fitControl,
-    tuneLength = 15
+    trControl = fitControl
   )
-
 
 cartModel$results
 plot(cartModel)
@@ -374,21 +373,26 @@ ggplot(varImp(rfModel))
 
 stopCluster(cl)
 
-gbmGrid <-  expand.grid(interaction.depth = c(1, 5, 9), 
-                        n.trees = (1:30)*50, 
-                        shrinkage = 0.1,
-                        n.minobsinnode = 20)
+gbmGrid <-  expand.grid(
+  interaction.depth = c(1, 5, 9),
+  n.trees = (1:30) * 50,
+  shrinkage = 0.1,
+  n.minobsinnode = 20
+)
 
 nrow(gbmGrid)
 
 set.seed(825)
-gbmFit2 <- train(Class ~ ., data = training, 
-                 method = "gbm", 
-                 trControl = fitControl, 
-                 verbose = FALSE, 
-                 ## Now specify the exact models 
-                 ## to evaluate:
-                 tuneGrid = gbmGrid)
+gbmFit2 <- train(
+  Class ~ .,
+  data = training,
+  method = "gbm",
+  trControl = fitControl,
+  verbose = FALSE,
+  ## Now specify the exact models
+  ## to evaluate:
+  tuneGrid = gbmGrid
+)
 gbmFit2
 
 
@@ -421,10 +425,9 @@ test <-
 hang_on <-
   df[f_fechaavaluo >= "2019-10-01" & f_fechaavaluo <= "2019-12-31"]
 
-# Informacion del ambiente 
+# Informacion del ambiente
 sessionInfo(package = NULL)
 
 # Otros modelos que pueden ser utilizados con el paquete caret:
 'https://rdrr.io/cran/caret/man/models.html'
 'https://topepo.github.io/caret/train-models-by-tag.html'
-
