@@ -341,6 +341,7 @@ glmModel =
 
 glmModel$results
 ggplot(varImp(glmModel))
+plot(glmModel)
 
 # Boosted Trees
 gbmModel =
@@ -354,24 +355,7 @@ gbmModel =
   )
 
 gbmModel$results
-
-# Random Forest
-tic()
-rfModel =
-  train(
-    mymodel,
-    data = train,
-    metric = "RMSE",
-    method = 'rf',
-    trControl = fitControl
-  )
-beep(3)
-toc()
-
-rfModel$results
-ggplot(varImp(rfModel))
-
-stopCluster(cl)
+plot(gbmModel)
 
 gbmGrid <-  expand.grid(
   interaction.depth = c(1, 5, 9),
@@ -394,6 +378,66 @@ gbmFit2 <- train(
   tuneGrid = gbmGrid
 )
 gbmFit2
+
+# Random Forest
+tic()
+rfModel =
+  train(
+    mymodel,
+    data = train,
+    metric = "RMSE",
+    method = 'rf',
+    trControl = fitControl
+  )
+beep(3)
+toc()
+
+rfModel$results
+ggplot(varImp(rfModel))
+plot(rfModel)
+
+# XGBoost
+tune.gridxgb = expand.grid(
+  eta = c(0.05, 0.3, 0.075),
+  # 3
+  nrounds = c(75, 100, 200),
+  # 3
+  max_depth = 2:7,
+  # 4
+  min_child_weight = c(2.0, 2.25),
+  #2
+  colsample_bytree = c(0.3, 0.4, 0.5),
+  # 3
+  gamma = 0,
+  #1
+  subsample = 1
+)  # 1
+
+# 3*3*4*2*3*1*1 = 216
+dim(tune.gridxgb)
+
+tic()
+xgbModel =
+  train(
+    mymodel,
+    data = train,
+    metric = "RMSE",
+    method = 'xgbTree',
+    tuneGrid = tune.gridxgb,
+    trControl = fitControl
+  )
+beep(3)
+toc()
+
+xgbModel$results
+ggplot(varImp(xgbModel))
+plot(xgbModel)
+
+
+# Detener la paralelizacion 
+stopCluster(cl)
+
+
 
 
 
