@@ -1,5 +1,5 @@
 
-
+'http://web.ipac.caltech.edu/staff/fmasci/home/astro_refs/BuildingPredictiveModelsR_caret.pdf'
 
 # Comentarios iniciales ####
 
@@ -42,7 +42,8 @@ pacman::p_load(
   corrplot,
   dataPreparation,
   tictoc,
-  beepr
+  beepr,
+  rattle 
 )
 
 # datos, arreglos y demas ####
@@ -293,37 +294,27 @@ summary(step.model$finalModel)
 # Todas las variables 'funcional', se decide seguir con la misma ecuacion.
 rm(step.model) %>% gc()
 
-
-
+modelLookup("rpart2")
 # cart Model
 cartModel <-
   train(
     mymodel,
     data = train,
     metric = "RMSE",
-    method = "rpart1SE",
-    trControl = fitControl
+    method = "rpart2",
+    trControl = fitControl,
+    tuneLength = 15
   )
 
 
 cartModel$results
+plot(cartModel)
 ggplot(varImp(cartModel))
 
-
-
-# Bagged MARS using gCV Pruning
-marsModel =
-  train(
-    mymodel,
-    data = train,
-    metric = "RMSE",
-    method = "bagEarthGCV",
-    trControl = fitControl
-  )
-
-marsModel$results
-# ggplot(varImp(marsModel))
-
+# Plot the final tree model
+par(xpd = NA) # Avoid clipping the text in some device
+plot(cartModel$finalModel)
+text(cartModel$finalModel, digits = 3)
 
 # Bayesian Generalized Linear Model
 bayesModel =
@@ -429,3 +420,11 @@ test <-
 
 hang_on <-
   df[f_fechaavaluo >= "2019-10-01" & f_fechaavaluo <= "2019-12-31"]
+
+# Informacion del ambiente 
+sessionInfo(package = NULL)
+
+# Otros modelos que pueden ser utilizados con el paquete caret:
+'https://rdrr.io/cran/caret/man/models.html'
+'https://topepo.github.io/caret/train-models-by-tag.html'
+
